@@ -157,9 +157,12 @@ The script will:
 
 ### Option B: Manual steps
 
-### 0. Prerequisites — EKS context
+### 0. Clone the repo and configure EKS context
 
 ```bash
+git clone https://github.com/jmckenzie-cs/falcon-operator-sensor-deployment.git
+cd falcon-operator-sensor-deployment
+
 # Update your kubeconfig for the target cluster
 aws eks update-kubeconfig --region <region> --name <cluster-name>
 

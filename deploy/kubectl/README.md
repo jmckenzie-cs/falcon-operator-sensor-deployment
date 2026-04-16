@@ -10,9 +10,12 @@ Direct `kubectl` commands — no scripts, no GitOps controller. Apply manifests 
 
 ## Steps
 
-### 0. Configure kubeconfig
+### 0. Clone the repo and configure EKS context
 
 ```bash
+git clone https://github.com/jmckenzie-cs/falcon-operator-sensor-deployment.git
+cd falcon-operator-sensor-deployment
+
 aws eks update-kubeconfig --region <region> --name <cluster-name>
 kubectl auth can-i '*' '*' --all-namespaces
 ```
