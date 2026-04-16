@@ -1,9 +1,12 @@
-# FalconDeployment — Node Sensor with Centralized Update Policy
+# FalconDeployment — EKS Node Sensor with Centralized Update Policy
+#
+# Target platform: Amazon EKS (managed and self-managed node groups)
+# NOT compatible with Fargate nodes — use sensors/container-sensor/ for Fargate.
 #
 # This manifest deploys:
-#   - FalconNodeSensor  (kernel DaemonSet on every node)            [deployNodeSensor: true]
-#   - FalconAdmission   (Kubernetes Admission Controller / KAC)     [deployAdmissionController: true]
-#   - FalconImageAnalyzer (Image Assessment at Runtime / IAR)       [deployImageAnalyzer: true]
+#   - FalconNodeSensor  (kernel DaemonSet on every EC2 node)          [deployNodeSensor: true]
+#   - FalconAdmission   (Kubernetes Admission Controller / KAC)       [deployAdmissionController: true]
+#   - FalconImageAnalyzer (Image Assessment at Runtime / IAR)         [deployImageAnalyzer: true]
 #
 # Sensor version is governed by the named Falcon Sensor Update Policy
 # configured in the Falcon console. The operator queries that policy
@@ -11,15 +14,17 @@
 # detected — no manifest changes required to roll a sensor update.
 #
 # Prerequisites:
-#   1. Falcon Operator installed:
+#   1. kubeconfig pointed at target EKS cluster:
+#        aws eks update-kubeconfig --region <region> --name <cluster-name>
+#   2. Falcon Operator installed:
 #        kubectl apply -f ../../operator/falcon-operator.yaml
-#   2. Kubernetes secret created in the falcon-operator namespace:
+#   3. Kubernetes secret created in the falcon-operator namespace:
 #        kubectl apply -f namespace.yaml
 #        kubectl create secret generic falcon-secrets -n falcon-operator \
 #          --from-literal=falcon-client-id="$FALCON_CLIENT_ID" \
 #          --from-literal=falcon-client-secret="$FALCON_CLIENT_SECRET" \
 #          --from-literal=falcon-cid="$FALCON_CID"
-#   3. Sensor Update Policy created in the Falcon console and its
+#   4. Sensor Update Policy created in the Falcon console and its
 #      exact name entered in node.advanced.updatePolicy below.
 #
 apiVersion: falcon.crowdstrike.com/v1alpha1
@@ -57,6 +62,21 @@ spec:
   deployAdmissionController: true # Falcon Kubernetes Admission Controller (default: true)
   deployImageAnalyzer: true       # Falcon Image Assessment at Runtime (default: true)
   deployContainerSensor: false    # Sidecar injection — do NOT enable alongside NodeSensor
+
+  # -----------------------------------------------------------------------
+  # ECR image mirroring (optional but recommended for private VPCs)
+  # -----------------------------------------------------------------------
+  # By default the operator pulls sensor images directly from the
+  # CrowdStrike registry (registry.crowdstrike.com). If your EKS nodes
+  # cannot reach the CrowdStrike registry (e.g., no public internet egress),
+  # mirror the images to your own ECR repository and set registry.type: ecr.
+  #
+  # To use ECR mirroring, uncomment the registry block below and ensure
+  # the operator service account has an IRSA role with ecr:GetAuthorizationToken
+  # and ecr:BatchGetImage permissions.
+  #
+  # registry:
+  #   type: ecr
 
   # -----------------------------------------------------------------------
   # Falcon sensor global settings (inherited by all child components)
@@ -101,15 +121,25 @@ spec:
         # Replace the value below with your policy name.
         updatePolicy: "k8s-prod"
 
-      # Optional: pin to a specific cluster name for self-managed clusters.
-      # EKS, GKE, and AKS resolve this automatically from the cloud API.
-      # clusterName: "my-cluster"
-
-      # Optional: tolerations for tainted nodes (e.g., GPU nodes, spot nodes)
+      # Optional: tolerations for tainted EKS node groups (e.g., GPU nodes, spot nodes,
+      # Bottlerocket nodes with custom taints).
       # tolerations:
-      #   - key: "node-role.kubernetes.io/control-plane"
+      #   - key: "nvidia.com/gpu"
       #     operator: "Exists"
       #     effect: "NoSchedule"
+      #   - key: "eks.amazonaws.com/compute-type"  # Fargate — do not add; use container sensor
+      #     operator: "Exists"
+      #     effect: "NoSchedule"
+
+      # EKS cluster name is resolved automatically via the AWS API.
+      # Only set this if automatic discovery fails on self-managed node groups.
+      # clusterName: "my-eks-cluster"
+
+      # Optional: IRSA annotation for the node sensor service account.
+      # Required if you mirror images to ECR using IAM-based pull credentials.
+      # serviceAccount:
+      #   annotations:
+      #     eks.amazonaws.com/role-arn: "arn:aws:iam::<account-id>:role/falcon-operator-role"
 
   # -----------------------------------------------------------------------
   # FalconAdmission (KAC) overrides
@@ -131,14 +161,19 @@ spec:
   # -----------------------------------------------------------------------
   falconImageAnalyzer:
     imageAnalyzerConfig:
-      # Required: cluster name used in IAR reporting
-      # For managed services (EKS/GKE/AKS) this is resolved automatically.
-      # For self-managed clusters, set explicitly:
-      # clusterName: "my-cluster"
+      # EKS cluster name is resolved automatically via the AWS API.
+      # Only set explicitly if automatic discovery fails.
+      # clusterName: "my-eks-cluster"
 
-      # Optional: exclude namespaces or registries from image scanning
+      # Optional: IRSA annotation for the IAR service account if pulling
+      # images from private ECR repositories.
+      # serviceAccount:
+      #   annotations:
+      #     eks.amazonaws.com/role-arn: "arn:aws:iam::<account-id>:role/falcon-operator-role"
+
+      # Optional: exclude namespaces or ECR registries from image scanning
       # exclusions:
       #   namespaces:
       #     - "kube-system"
       #   registries:
-      #     - "internal-registry.example.com"
+      #     - "<account-id>.dkr.ecr.<region>.amazonaws.com/internal"

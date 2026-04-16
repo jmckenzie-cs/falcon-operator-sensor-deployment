@@ -1,14 +1,18 @@
-# FalconDeployment — Container Sensor (Sidecar Injection)
+# FalconDeployment — Container Sensor (Sidecar Injection) for EKS Fargate
 #
-# Use this manifest INSTEAD OF falcondeployment.yaml (node-sensor) when
-# kernel access is not available on worker nodes (e.g., AWS Fargate,
-# managed node pools that prohibit privileged containers).
+# Use this manifest INSTEAD OF sensors/node-sensor/falcondeployment.yaml when
+# running workloads on AWS Fargate, where kernel access and privileged containers
+# are not permitted.
+#
+# FalconNodeSensor (kernel DaemonSet) is NOT compatible with Fargate nodes.
+# Use this sidecar injection model for Fargate pods.
+#
+# The container sensor runs as an unprivileged sidecar injected into each
+# pod via a MutatingWebhookConfiguration. The operator must be running on
+# EC2 nodes (not Fargate) to manage the webhook.
 #
 # DO NOT deploy FalconNodeSensor and FalconContainer on the same cluster —
 # pick one deployment model per cluster.
-#
-# The container sensor runs as an unprivileged sidecar injected into each
-# pod via a MutatingWebhookConfiguration.
 #
 apiVersion: falcon.crowdstrike.com/v1alpha1
 kind: FalconDeployment

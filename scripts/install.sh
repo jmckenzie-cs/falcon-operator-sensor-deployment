@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
-# install.sh — End-to-end Falcon Operator + FalconNodeSensor installation
+# install.sh — End-to-end Falcon Operator + FalconNodeSensor installation on Amazon EKS
 #
 # Usage:
+#   export AWS_REGION="us-east-1"                      # EKS cluster region
+#   export EKS_CLUSTER_NAME="my-cluster"               # EKS cluster name
 #   export FALCON_CLIENT_ID="<your-client-id>"
 #   export FALCON_CLIENT_SECRET="<your-client-secret>"
 #   export FALCON_CID="<your-cid-with-checksum>"
@@ -15,6 +17,8 @@ set -euo pipefail
 # ---------------------------------------------------------------------------
 # Validation
 # ---------------------------------------------------------------------------
+: "${AWS_REGION:?AWS_REGION must be set}"
+: "${EKS_CLUSTER_NAME:?EKS_CLUSTER_NAME must be set}"
 : "${FALCON_CLIENT_ID:?FALCON_CLIENT_ID must be set}"
 : "${FALCON_CLIENT_SECRET:?FALCON_CLIENT_SECRET must be set}"
 : "${FALCON_CID:?FALCON_CID must be set}"
@@ -25,11 +29,25 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-echo "==> Falcon Operator Installer"
+echo "==> Falcon Operator Installer — Amazon EKS"
+echo "    Cluster          : ${EKS_CLUSTER_NAME} (${AWS_REGION})"
 echo "    Operator version : ${OPERATOR_VERSION}"
 echo "    Cloud region     : ${FALCON_CLOUD_REGION}"
 echo "    Update policy    : ${FALCON_UPDATE_POLICY}"
 echo ""
+
+# ---------------------------------------------------------------------------
+# Step 0: Configure kubeconfig for EKS
+# ---------------------------------------------------------------------------
+echo "==> Step 0: Configuring kubeconfig for EKS cluster..."
+aws eks update-kubeconfig --region "${AWS_REGION}" --name "${EKS_CLUSTER_NAME}"
+
+# Confirm cluster access
+if ! kubectl auth can-i '*' '*' --all-namespaces &>/dev/null; then
+  echo "ERROR: kubectl does not have cluster-admin access. Check your IAM permissions."
+  exit 1
+fi
+echo "    kubeconfig configured and cluster access verified."
 
 # ---------------------------------------------------------------------------
 # Step 1: Install the Falcon Operator

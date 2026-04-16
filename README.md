@@ -1,10 +1,10 @@
-# Falcon Sensor Deployment via Falcon Operator
+# Falcon Sensor Deployment via Falcon Operator — Amazon EKS
 
-This repository provides production-ready Kubernetes manifests and supporting documentation for deploying the CrowdStrike Falcon sensor using the **Falcon Operator**, with a centralized upgrade strategy driven by **Falcon Sensor Update Policies**.
+This repository provides production-ready Kubernetes manifests and supporting documentation for deploying the CrowdStrike Falcon sensor on **Amazon EKS** using the **Falcon Operator**, with a centralized upgrade strategy driven by **Falcon Sensor Update Policies**.
 
 ## Overview
 
-The Falcon Operator uses Custom Resource Definitions (CRDs) to install, configure, and lifecycle-manage Falcon security components on Kubernetes clusters. This repo focuses on the **FalconNodeSensor** (DaemonSet) deployment model and wires it to a named Sensor Update Policy in the Falcon console so that all version governance lives in one place — the Falcon platform — rather than scattered across CI pipelines or manifest files.
+The Falcon Operator uses Custom Resource Definitions (CRDs) to install, configure, and lifecycle-manage Falcon security components on EKS clusters. This repo focuses on the **FalconNodeSensor** (DaemonSet) deployment model for managed node groups, with the container sensor provided as an alternative for Fargate workloads. Sensor version governance is wired to a named Sensor Update Policy in the Falcon console so all upgrade decisions live in one place — the Falcon platform — rather than scattered across CI pipelines or manifest files.
 
 ```
 Falcon Console (Sensor Update Policy)
@@ -29,10 +29,14 @@ Falcon Console (Sensor Update Policy)
 | Decision | Choice | Rationale |
 |---|---|---|
 | Deployment method | Falcon Operator (FalconDeployment CRD) | Single manifest controls all components; GitOps-friendly |
-| Sensor type | FalconNodeSensor (kernel DaemonSet) | Full kernel-level visibility on worker nodes |
+| Sensor type | FalconNodeSensor (kernel DaemonSet) | Full kernel-level visibility on EKS managed/self-managed node groups |
 | Version governance | `node.advanced.updatePolicy` → named Falcon policy | Centralizes upgrade decisions in the Falcon console; no manifest changes needed to roll a new sensor |
 | Secrets management | Kubernetes Secret + `falconSecret` block | API credentials never stored in manifests or source control |
 | Auto-update mode | `autoUpdate: normal` | Operator reconciles only when a new version is detected via the policy |
+| Image registry | CrowdStrike registry (default) or ECR mirror | ECR mirror recommended for air-gapped VPCs or strict egress controls |
+| Credentials for ECR | IAM Role for Service Account (IRSA) | Avoid long-lived AWS credentials; bind IAM permissions to the operator service account |
+
+> **Fargate note:** FalconNodeSensor requires privileged kernel access and **cannot run on Fargate nodes**. For Fargate workloads, use the container sensor manifest in `sensors/container-sensor/`.
 
 ## Prerequisites
 
@@ -51,19 +55,18 @@ Create an API client at **Support and resources > Resources and tools > API clie
 | Sensor Download | Read | Access sensor deployment packages |
 | Sensor Update Policies | Read | **Required** for `autoUpdate` + `updatePolicy` features |
 
-### Kubernetes Requirements
-| Platform | Minimum Version |
-|---|---|
-| Amazon EKS | 1.17+ |
-| Azure AKS | 1.18+ |
-| Google GKE | 1.18+ |
-| Red Hat OpenShift | 4.10+ |
-| Self-managed | 1.21+ |
+### EKS Requirements
+
+- EKS cluster version **1.17 or later**
+- Node groups must use **managed or self-managed EC2 nodes** (not Fargate) for FalconNodeSensor
+- Worker nodes must run a supported Linux OS (Amazon Linux 2, Bottlerocket, Ubuntu)
+- Cluster must have an **OIDC provider** configured if using IRSA for ECR pull credentials
 
 ### Tools
-- `kubectl` (cluster admin access)
-- `curl`, `jq` (for helper scripts)
-- `oc` (OpenShift only)
+- `kubectl` (with cluster-admin access)
+- `aws` CLI (configured with appropriate IAM permissions)
+- `eksctl` (optional, used in IRSA setup examples)
+- `curl`, `jq`
 
 ## Repository Structure
 
@@ -94,6 +97,16 @@ Create an API client at **Support and resources > Resources and tools > API clie
 ```
 
 ## Quick Start
+
+### 0. Prerequisites — EKS context
+
+```bash
+# Update your kubeconfig for the target cluster
+aws eks update-kubeconfig --region <region> --name <cluster-name>
+
+# Verify you have cluster-admin
+kubectl auth can-i '*' '*' --all-namespaces
+```
 
 ### 1. Install the Falcon Operator
 
@@ -177,3 +190,6 @@ kubectl get deployment falcon-operator -n falcon-operator -o yaml | grep sensor-
 - [CrowdStrike Falcon Operator Docs](https://falcon.crowdstrike.com/documentation/category/c2d4a7a0/operator)
 - [Sensor Update Policies](https://falcon.crowdstrike.com/documentation/page/d2d629cf/sensor-update-policies)
 - [Component Configuration Reference](https://falcon.crowdstrike.com/documentation/page/k50c89b4/component-specific-configuration-options)
+- [Amazon EKS Documentation](https://docs.aws.amazon.com/eks/latest/userguide/getting-started.html)
+- [IAM Roles for Service Accounts (IRSA)](https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html)
+- [Amazon ECR Private Registries](https://docs.aws.amazon.com/AmazonECR/latest/userguide/Registries.html)
