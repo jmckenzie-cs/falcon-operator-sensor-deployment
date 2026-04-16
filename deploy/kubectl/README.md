@@ -50,9 +50,13 @@ Note the exact policy name — it is case-sensitive.
 
 ### 4. Edit and apply the FalconDeployment manifest
 
-Open `../../sensors/node-sensor/falcondeployment.yaml` and set:
-- `falcon_api.cloud_region` — your CrowdStrike cloud region
-- `node.advanced.updatePolicy` — exact name of your Sensor Update Policy
+```bash
+vi ../../sensors/node-sensor/falcondeployment.yaml
+```
+
+Set:
+- `falcon_api.cloud_region` — your CrowdStrike cloud region (e.g., `us-1`). Leave as `autodiscover` if unsure.
+- `node.advanced.updatePolicy` — the **exact name** of the Sensor Update Policy you created in Step 3 (case-sensitive).
 
 Then apply:
 
