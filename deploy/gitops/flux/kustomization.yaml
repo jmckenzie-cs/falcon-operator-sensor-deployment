@@ -1,0 +1,75 @@
+# Flux Kustomization — one per EKS cluster/environment
+#
+# The Flux Kustomization resource tells the Flux source-controller and
+# kustomize-controller which path in the git repo to apply to which cluster.
+#
+# Prerequisites:
+#   1. Flux installed on the cluster: flux bootstrap github ...
+#   2. A GitRepository source pointing at this repo (see GitRepository below)
+#   3. The ExternalSecret (../external-secrets/externalsecret.yaml) applied
+#      so that the falcon-secrets Kubernetes secret exists before Flux
+#      attempts to reconcile the FalconDeployment.
+#
+# Flux naturally ignores status subresources so it does not fight the
+# Falcon Operator's reconciliation of status fields. However, if Flux
+# detects drift in the node.image field (set by the operator after an
+# auto-update), add a kustomize patch to ignore it (see note below).
+#
+---
+# GitRepository — points Flux at this repo
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: falcon-operator-sensor-deployment
+  namespace: flux-system
+spec:
+  interval: 5m
+  url: https://github.com/jmckenzie-cs/falcon-operator-sensor-deployment.git
+  ref:
+    branch: main
+---
+# Flux Kustomization — prod overlay
+# Apply one of these per environment; change path and cluster target accordingly.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: falcon-sensor-prod
+  namespace: flux-system
+spec:
+  interval: 10m       # how often Flux reconciles
+  retryInterval: 2m
+  sourceRef:
+    kind: GitRepository
+    name: falcon-operator-sensor-deployment
+  path: ./deploy/gitops/kustomize/overlays/prod
+  prune: false        # do not prune — the operator manages child resources
+  wait: true
+  timeout: 5m
+
+  # Tells Flux to create the falcon-operator namespace if it doesn't exist
+  # (the FalconDeployment will be applied there by the operator)
+  targetNamespace: falcon-operator
+
+  # Health checks — Flux waits for these before marking the Kustomization healthy
+  healthChecks:
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: falcon-operator-controller-manager
+      namespace: falcon-operator
+
+  # Force server-side apply for CRDs
+  force: false
+  # Note: if Flux detects drift on spec.node.image (operator-managed after
+  # auto-update), add a strategic merge patch here to ignore that field:
+  #
+  # patches:
+  #   - patch: |
+  #       apiVersion: falcon.crowdstrike.com/v1alpha1
+  #       kind: FalconNodeSensor
+  #       metadata:
+  #         name: falcon-node-sensor
+  #       spec:
+  #         node:
+  #           image: null   # ignore — managed by operator
+  #     target:
+  #       kind: FalconNodeSensor

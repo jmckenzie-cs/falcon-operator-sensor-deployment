@@ -1,0 +1,10 @@
+# Patches updatePolicy to the prod Sensor Update Policy (Auto - N-2)
+apiVersion: falcon.crowdstrike.com/v1alpha1
+kind: FalconDeployment
+metadata:
+  name: falcon-deployment
+spec:
+  falconNodeSensor:
+    node:
+      advanced:
+        updatePolicy: "k8s-prod"

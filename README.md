@@ -74,26 +74,45 @@ Create an API client at **Support and resources > Resources and tools > API clie
 .
 ├── README.md
 ├── operator/
-│   └── falcon-operator.yaml          # Operator controller deployment (versioned)
-├── sensors/
+│   └── README.md                          # Operator version pinning instructions
+├── sensors/                               # Raw manifests (used by all deploy models)
 │   ├── node-sensor/
-│   │   ├── namespace.yaml            # falcon-system namespace
-│   │   ├── secret.yaml               # Kubernetes secret template (gitignore the populated version)
-│   │   └── falcondeployment.yaml     # Primary FalconDeployment CRD manifest
+│   │   ├── namespace.yaml
+│   │   ├── secret.yaml                    # Secret template — never commit populated
+│   │   └── falcondeployment.yaml          # FalconDeployment with all options documented
 │   └── container-sensor/
-│       └── falcondeployment-container.yaml  # Alternative: sidecar injection deployment
+│       └── falcondeployment-container.yaml  # EKS Fargate sidecar injection alternative
+├── deploy/                                # Deployment models — pick one
+│   ├── kubectl/
+│   │   └── README.md                      # Model 1: imperative kubectl steps
+│   ├── scripted/
+│   │   └── README.md                      # Model 2: install.sh usage and pipeline integration
+│   └── gitops/
+│       ├── README.md                      # Model 3: ArgoCD / Flux setup guide
+│       ├── kustomize/
+│       │   ├── base/                      # Base FalconDeployment (updatePolicy unset)
+│       │   └── overlays/
+│       │       ├── dev/                   # updatePolicy: k8s-dev   (Auto - Latest)
+│       │       ├── staging/               # updatePolicy: k8s-staging (Auto - N-1)
+│       │       └── prod/                  # updatePolicy: k8s-prod   (Auto - N-2)
+│       ├── argocd/
+│       │   └── application.yaml           # ArgoCD Application manifests (one per env)
+│       ├── flux/
+│       │   └── kustomization.yaml         # Flux GitRepository + Kustomization resources
+│       └── external-secrets/
+│           └── externalsecret.yaml        # ESO ExternalSecret — syncs from AWS Secrets Manager
 ├── update-policies/
-│   └── sensor-update-policy-guide.md # How to configure the Falcon console policy
+│   └── sensor-update-policy-guide.md      # How to configure Falcon console policies
 ├── docs/
-│   ├── architecture.md               # Architecture deep-dive
-│   ├── upgrade-strategy.md           # Centralized upgrade strategy explained
-│   └── troubleshooting.md            # Common issues and kubectl diagnostic commands
+│   ├── architecture.md                    # EKS architecture, networking, IRSA
+│   ├── upgrade-strategy.md                # Centralized upgrade strategy explained
+│   └── troubleshooting.md                 # Common issues and kubectl diagnostics
 ├── scripts/
-│   ├── install.sh                    # End-to-end install helper
-│   └── verify.sh                     # Post-install verification
+│   ├── install.sh                         # End-to-end install helper (Model 2)
+│   └── verify.sh                          # Post-install verification
 └── .github/
     └── workflows/
-        └── validate-manifests.yaml   # CI: kubeval + dry-run validation
+        └── validate-manifests.yaml        # CI: YAML validation + credential leak check
 ```
 
 ## Quick Start

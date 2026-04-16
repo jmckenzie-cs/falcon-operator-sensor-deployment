@@ -1,0 +1,155 @@
+# ArgoCD Application — one per EKS cluster/environment
+#
+# Deploy one Application manifest per cluster, pointing at the
+# appropriate Kustomize overlay for that environment.
+#
+# ignoreDifferences is required because the Falcon Operator continuously
+# reconciles FalconDeployment and FalconNodeSensor resources, mutating
+# status fields and the sensor image reference after each auto-update.
+# Without this, ArgoCD will see operator-managed changes as drift and
+# attempt to revert them.
+#
+# Usage:
+#   kubectl apply -f deploy/gitops/argocd/application-prod.yaml
+#   (applied to the ArgoCD control cluster, not the target EKS cluster)
+#
+---
+# Production cluster
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: falcon-sensor-prod
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "10"   # deploy after cluster infra
+spec:
+  project: default
+
+  source:
+    repoURL: https://github.com/jmckenzie-cs/falcon-operator-sensor-deployment.git
+    targetRevision: main
+    path: deploy/gitops/kustomize/overlays/prod
+
+  destination:
+    server: https://kubernetes.default.svc   # replace with target cluster API URL
+    namespace: falcon-operator
+
+  syncPolicy:
+    automated:
+      prune: false      # do not prune — the operator manages child resources
+      selfHeal: true    # revert manual changes to the FalconDeployment spec
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true   # required for CRDs with large annotations
+
+  # ignoreDifferences tells ArgoCD not to treat operator-managed fields as drift.
+  # The Falcon Operator owns: status (all), and node.image (after auto-update rolls
+  # a new sensor version). Without these entries ArgoCD will fight the operator.
+  ignoreDifferences:
+    - group: falcon.crowdstrike.com
+      kind: FalconDeployment
+      jsonPointers:
+        - /status
+    - group: falcon.crowdstrike.com
+      kind: FalconNodeSensor
+      jsonPointers:
+        - /status
+        - /spec/node/image
+    - group: falcon.crowdstrike.com
+      kind: FalconAdmission
+      jsonPointers:
+        - /status
+    - group: falcon.crowdstrike.com
+      kind: FalconImageAnalyzer
+      jsonPointers:
+        - /status
+---
+# Staging cluster — change destination.server and path overlay
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: falcon-sensor-staging
+  namespace: argocd
+spec:
+  project: default
+
+  source:
+    repoURL: https://github.com/jmckenzie-cs/falcon-operator-sensor-deployment.git
+    targetRevision: main
+    path: deploy/gitops/kustomize/overlays/staging
+
+  destination:
+    server: https://<staging-cluster-api-url>   # replace with staging cluster API URL
+    namespace: falcon-operator
+
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+
+  ignoreDifferences:
+    - group: falcon.crowdstrike.com
+      kind: FalconDeployment
+      jsonPointers:
+        - /status
+    - group: falcon.crowdstrike.com
+      kind: FalconNodeSensor
+      jsonPointers:
+        - /status
+        - /spec/node/image
+    - group: falcon.crowdstrike.com
+      kind: FalconAdmission
+      jsonPointers:
+        - /status
+    - group: falcon.crowdstrike.com
+      kind: FalconImageAnalyzer
+      jsonPointers:
+        - /status
+---
+# Dev cluster
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: falcon-sensor-dev
+  namespace: argocd
+spec:
+  project: default
+
+  source:
+    repoURL: https://github.com/jmckenzie-cs/falcon-operator-sensor-deployment.git
+    targetRevision: main
+    path: deploy/gitops/kustomize/overlays/dev
+
+  destination:
+    server: https://<dev-cluster-api-url>   # replace with dev cluster API URL
+    namespace: falcon-operator
+
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+
+  ignoreDifferences:
+    - group: falcon.crowdstrike.com
+      kind: FalconDeployment
+      jsonPointers:
+        - /status
+    - group: falcon.crowdstrike.com
+      kind: FalconNodeSensor
+      jsonPointers:
+        - /status
+        - /spec/node/image
+    - group: falcon.crowdstrike.com
+      kind: FalconAdmission
+      jsonPointers:
+        - /status
+    - group: falcon.crowdstrike.com
+      kind: FalconImageAnalyzer
+      jsonPointers:
+        - /status

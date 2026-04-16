@@ -1,0 +1,10 @@
+# Patches updatePolicy to the dev Sensor Update Policy (Auto - Latest)
+apiVersion: falcon.crowdstrike.com/v1alpha1
+kind: FalconDeployment
+metadata:
+  name: falcon-deployment
+spec:
+  falconNodeSensor:
+    node:
+      advanced:
+        updatePolicy: "k8s-dev"

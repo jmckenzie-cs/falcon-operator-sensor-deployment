@@ -1,0 +1,10 @@
+# Patches updatePolicy to the staging Sensor Update Policy (Auto - N-1)
+apiVersion: falcon.crowdstrike.com/v1alpha1
+kind: FalconDeployment
+metadata:
+  name: falcon-deployment
+spec:
+  falconNodeSensor:
+    node:
+      advanced:
+        updatePolicy: "k8s-staging"

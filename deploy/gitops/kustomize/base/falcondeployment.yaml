@@ -1,0 +1,49 @@
+# FalconDeployment — Kustomize base
+#
+# This is the base manifest used by all environment overlays.
+# Do not set updatePolicy here — each overlay patches it with the
+# environment-specific Sensor Update Policy name.
+#
+# Credentials are sourced from the Kubernetes secret managed by
+# the ExternalSecret in deploy/gitops/external-secrets/.
+#
+apiVersion: falcon.crowdstrike.com/v1alpha1
+kind: FalconDeployment
+metadata:
+  name: falcon-deployment
+  labels:
+    crowdstrike.com/component: sensor
+    crowdstrike.com/created-by: falcon-operator
+    crowdstrike.com/managed-by: kustomize
+    crowdstrike.com/name: falcon-deployment
+    crowdstrike.com/part-of: Falcon
+    crowdstrike.com/provider: crowdstrike
+spec:
+  falconSecret:
+    enabled: true
+    namespace: falcon-operator
+    secretName: falcon-secrets
+
+  falcon_api:
+    cloud_region: autodiscover
+
+  deployNodeSensor: true
+  deployAdmissionController: true
+  deployImageAnalyzer: true
+  deployContainerSensor: false
+
+  falcon: {}
+
+  falconNodeSensor:
+    node:
+      backend: bpf
+      advanced:
+        autoUpdate: normal
+        updatePolicy: ""    # patched by each overlay
+
+  falconAdmission:
+    admissionConfig:
+      admissionControlEnabled: true
+
+  falconImageAnalyzer:
+    imageAnalyzerConfig: {}
