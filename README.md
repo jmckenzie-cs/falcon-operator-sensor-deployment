@@ -13,9 +13,9 @@ Falcon Console (Sensor Update Policy)
          ▼
    Falcon Operator  ──────────────────────────────────────┐
          │  node.advanced.updatePolicy = "k8s-prod"       │
-         │  node.advanced.autoUpdate   = normal            │
-         ▼                                                 │
-   FalconDeployment CRD                                    │
+         │  node.advanced.autoUpdate   = normal           │
+         ▼                                                │
+   FalconDeployment CRD                                   │
      ├── FalconNodeSensor  (DaemonSet on each node)       │
      ├── FalconAdmission   (Kubernetes Admission KAC)     │
      └── FalconImageAnalyzer (IAR agent)                  │
