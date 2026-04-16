@@ -98,6 +98,48 @@ Create an API client at **Support and resources > Resources and tools > API clie
 
 ## Quick Start
 
+There are two ways to deploy: the **automated script** (recommended for first-time installs) or **manual steps** (for GitOps / step-by-step control).
+
+---
+
+### Option A: Automated install with `install.sh`
+
+The script handles kubeconfig, operator install, secret creation, manifest substitution, and verification in one pass.
+
+```bash
+# Clone the repo
+git clone https://github.com/jmckenzie-cs/falcon-operator-sensor-deployment.git
+cd falcon-operator-sensor-deployment
+
+# Set required environment variables
+export AWS_REGION="us-east-1"
+export EKS_CLUSTER_NAME="my-cluster"
+export FALCON_CLIENT_ID="<your-api-client-id>"
+export FALCON_CLIENT_SECRET="<your-api-client-secret>"
+export FALCON_CID="<your-cid-with-checksum>"
+
+# Optional overrides (defaults shown)
+export FALCON_CLOUD_REGION="autodiscover"   # or us-1, us-2, eu-1, us-gov-1
+export FALCON_UPDATE_POLICY="k8s-prod"      # exact name of your Sensor Update Policy
+export OPERATOR_VERSION="v1.7.0"            # pin to a specific operator release
+
+# Run the installer
+bash scripts/install.sh
+```
+
+The script will:
+1. Run `aws eks update-kubeconfig` and verify cluster-admin access
+2. Install the Falcon Operator and wait for it to be ready
+3. Create the `falcon-secrets` Kubernetes secret in the `falcon-operator` namespace
+4. Apply the FalconDeployment manifest with your policy name and cloud region substituted in
+5. Run `scripts/verify.sh` to confirm all components are healthy
+
+---
+
+### Option B: Manual steps
+
+### Option B: Manual steps
+
 ### 0. Prerequisites — EKS context
 
 ```bash
