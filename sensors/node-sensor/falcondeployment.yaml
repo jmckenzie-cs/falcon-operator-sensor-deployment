@@ -1,0 +1,144 @@
+# FalconDeployment — Node Sensor with Centralized Update Policy
+#
+# This manifest deploys:
+#   - FalconNodeSensor  (kernel DaemonSet on every node)            [deployNodeSensor: true]
+#   - FalconAdmission   (Kubernetes Admission Controller / KAC)     [deployAdmissionController: true]
+#   - FalconImageAnalyzer (Image Assessment at Runtime / IAR)       [deployImageAnalyzer: true]
+#
+# Sensor version is governed by the named Falcon Sensor Update Policy
+# configured in the Falcon console. The operator queries that policy
+# every 24 hours and reconciles the DaemonSet when a new version is
+# detected — no manifest changes required to roll a sensor update.
+#
+# Prerequisites:
+#   1. Falcon Operator installed:
+#        kubectl apply -f ../../operator/falcon-operator.yaml
+#   2. Kubernetes secret created in the falcon-operator namespace:
+#        kubectl apply -f namespace.yaml
+#        kubectl create secret generic falcon-secrets -n falcon-operator \
+#          --from-literal=falcon-client-id="$FALCON_CLIENT_ID" \
+#          --from-literal=falcon-client-secret="$FALCON_CLIENT_SECRET" \
+#          --from-literal=falcon-cid="$FALCON_CID"
+#   3. Sensor Update Policy created in the Falcon console and its
+#      exact name entered in node.advanced.updatePolicy below.
+#
+apiVersion: falcon.crowdstrike.com/v1alpha1
+kind: FalconDeployment
+metadata:
+  name: falcon-deployment
+  labels:
+    crowdstrike.com/component: sensor
+    crowdstrike.com/created-by: falcon-operator
+    crowdstrike.com/managed-by: kustomize
+    crowdstrike.com/name: falcon-deployment
+    crowdstrike.com/part-of: Falcon
+    crowdstrike.com/provider: crowdstrike
+spec:
+  # -----------------------------------------------------------------------
+  # API Credentials
+  # Sourced from the Kubernetes secret created in the falcon-operator
+  # namespace. Never put credentials directly in this file.
+  # -----------------------------------------------------------------------
+  falconSecret:
+    enabled: true
+    namespace: falcon-operator
+    secretName: falcon-secrets
+
+  falcon_api:
+    # Set to your CrowdStrike cloud region to avoid potential API throttling.
+    # Options: autodiscover | us-1 | us-2 | eu-1 | us-gov-1 | us-gov-2
+    # Note: autodiscover cannot be used for us-gov-1 or us-gov-2.
+    cloud_region: autodiscover
+
+  # -----------------------------------------------------------------------
+  # Components to deploy
+  # -----------------------------------------------------------------------
+  deployNodeSensor: true          # Falcon sensor for Linux DaemonSet (default: true)
+  deployAdmissionController: true # Falcon Kubernetes Admission Controller (default: true)
+  deployImageAnalyzer: true       # Falcon Image Assessment at Runtime (default: true)
+  deployContainerSensor: false    # Sidecar injection — do NOT enable alongside NodeSensor
+
+  # -----------------------------------------------------------------------
+  # Falcon sensor global settings (inherited by all child components)
+  # -----------------------------------------------------------------------
+  falcon:
+    # Uncomment and set if required for your environment
+    # apd: false                  # Disable proxy for Falcon sensor
+    # aph: "proxy.example.com"    # Proxy host
+    # app: "8080"                 # Proxy port
+    # provisioning_token: ""      # Installation token
+    # tags: ["k8s", "prod"]       # Sensor grouping tags (alphanumeric, /, -, _)
+
+  # -----------------------------------------------------------------------
+  # FalconNodeSensor overrides
+  # -----------------------------------------------------------------------
+  falconNodeSensor:
+    node:
+      # Backend mode: bpf (default, recommended) or kernel
+      backend: bpf
+
+      # Centralized upgrade strategy via Falcon Sensor Update Policy.
+      # The operator queries the Falcon API every 24 hours. When the
+      # named policy resolves to a new sensor version, the operator
+      # automatically reconciles the DaemonSet.
+      #
+      # IMPORTANT: Your API key must have "Sensor Update Policies: Read"
+      # scope for autoUpdate and updatePolicy to function.
+      advanced:
+        # autoUpdate options:
+        #   normal  — reconcile when a new version is detected (recommended)
+        #   force   — reconcile after every version check regardless
+        #   off     — disable automatic updates entirely
+        autoUpdate: normal
+
+        # updatePolicy: The exact name of the Sensor Update Policy
+        # configured in the Falcon console.
+        # Example policies and their intended audience:
+        #   k8s-prod    → Auto - N-1 (production clusters, one version behind latest)
+        #   k8s-staging → Auto - Latest (staging/test clusters, always latest)
+        #   k8s-lts     → pinned LTS build (stability-focused environments)
+        #
+        # Replace the value below with your policy name.
+        updatePolicy: "k8s-prod"
+
+      # Optional: pin to a specific cluster name for self-managed clusters.
+      # EKS, GKE, and AKS resolve this automatically from the cloud API.
+      # clusterName: "my-cluster"
+
+      # Optional: tolerations for tainted nodes (e.g., GPU nodes, spot nodes)
+      # tolerations:
+      #   - key: "node-role.kubernetes.io/control-plane"
+      #     operator: "Exists"
+      #     effect: "NoSchedule"
+
+  # -----------------------------------------------------------------------
+  # FalconAdmission (KAC) overrides
+  # -----------------------------------------------------------------------
+  falconAdmission:
+    admissionConfig:
+      # Admission control webhook is enabled by default (KAC 7.26+).
+      # Set to false for visibility-only mode (no blocking).
+      admissionControlEnabled: true
+
+      # Namespaces the admission webhook should skip entirely.
+      # kube-system and kube-public are excluded by default.
+      # disabledNamespaces:
+      #   namespaces:
+      #     - "my-trusted-namespace"
+
+  # -----------------------------------------------------------------------
+  # FalconImageAnalyzer (IAR) overrides
+  # -----------------------------------------------------------------------
+  falconImageAnalyzer:
+    imageAnalyzerConfig:
+      # Required: cluster name used in IAR reporting
+      # For managed services (EKS/GKE/AKS) this is resolved automatically.
+      # For self-managed clusters, set explicitly:
+      # clusterName: "my-cluster"
+
+      # Optional: exclude namespaces or registries from image scanning
+      # exclusions:
+      #   namespaces:
+      #     - "kube-system"
+      #   registries:
+      #     - "internal-registry.example.com"

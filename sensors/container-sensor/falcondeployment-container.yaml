@@ -1,0 +1,61 @@
+# FalconDeployment — Container Sensor (Sidecar Injection)
+#
+# Use this manifest INSTEAD OF falcondeployment.yaml (node-sensor) when
+# kernel access is not available on worker nodes (e.g., AWS Fargate,
+# managed node pools that prohibit privileged containers).
+#
+# DO NOT deploy FalconNodeSensor and FalconContainer on the same cluster —
+# pick one deployment model per cluster.
+#
+# The container sensor runs as an unprivileged sidecar injected into each
+# pod via a MutatingWebhookConfiguration.
+#
+apiVersion: falcon.crowdstrike.com/v1alpha1
+kind: FalconDeployment
+metadata:
+  name: falcon-deployment
+  labels:
+    crowdstrike.com/component: sensor
+    crowdstrike.com/created-by: falcon-operator
+    crowdstrike.com/managed-by: kustomize
+    crowdstrike.com/name: falcon-deployment
+    crowdstrike.com/part-of: Falcon
+    crowdstrike.com/provider: crowdstrike
+spec:
+  falconSecret:
+    enabled: true
+    namespace: falcon-operator
+    secretName: falcon-secrets
+
+  falcon_api:
+    cloud_region: autodiscover
+
+  deployNodeSensor: false         # Disabled — use container sensor instead
+  deployContainerSensor: true     # Falcon Container (sidecar injection)
+  deployAdmissionController: true
+  deployImageAnalyzer: true
+
+  falcon: {}
+
+  # -----------------------------------------------------------------------
+  # FalconContainer overrides
+  # -----------------------------------------------------------------------
+  falconContainerSensor:
+    # Advanced auto-update via Sensor Update Policy (same mechanism as NodeSensor).
+    # Spec location for container sensor: spec.advanced (not spec.node.advanced)
+    advanced:
+      autoUpdate: normal
+      updatePolicy: "k8s-prod"
+
+    injector:
+      # Disable default injection globally and opt-in per namespace/pod
+      # disableDefaultNamespaceInjection: false
+      # disableDefaultPodInjection: false
+      replicas: 2
+
+  falconAdmission:
+    admissionConfig:
+      admissionControlEnabled: true
+
+  falconImageAnalyzer:
+    imageAnalyzerConfig: {}

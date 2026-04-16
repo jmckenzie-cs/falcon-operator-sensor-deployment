@@ -1,0 +1,11 @@
+# Secrets — never commit populated secret files
+sensors/node-sensor/secret-populated.yaml
+sensors/container-sensor/secret-populated.yaml
+**/falcon-secrets.yaml
+
+# OS artifacts
+.DS_Store
+*.swp
+
+# Temporary files
+/tmp/falcondeployment.*.yaml

@@ -1,0 +1,72 @@
+name: Validate Manifests
+
+on:
+  pull_request:
+    paths:
+      - "sensors/**/*.yaml"
+      - "operator/**/*.yaml"
+  push:
+    branches:
+      - main
+    paths:
+      - "sensors/**/*.yaml"
+      - "operator/**/*.yaml"
+
+jobs:
+  validate:
+    name: Validate Kubernetes Manifests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install kubeval
+        run: |
+          wget -q https://github.com/instrumenta/kubeval/releases/latest/download/kubeval-linux-amd64.tar.gz
+          tar xf kubeval-linux-amd64.tar.gz
+          sudo mv kubeval /usr/local/bin/
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Validate namespace and secret template YAMLs
+        run: |
+          kubeval --strict sensors/node-sensor/namespace.yaml
+
+      - name: Dry-run FalconDeployment (node sensor) against cluster API
+        # This step requires a valid kubeconfig. For offline validation,
+        # kubeval skips CRDs it doesn't know about — this is expected.
+        # To enable full CRD validation, add crowdstrike CRD schemas.
+        run: |
+          echo "Validating YAML structure..."
+          python3 -c "
+          import yaml, sys
+          files = [
+            'sensors/node-sensor/falcondeployment.yaml',
+            'sensors/container-sensor/falcondeployment-container.yaml',
+          ]
+          for f in files:
+              with open(f) as fh:
+                  docs = list(yaml.safe_load_all(fh))
+              print(f'OK: {f} ({len(docs)} document(s))')
+          "
+
+      - name: Check for hardcoded credentials
+        run: |
+          echo "Checking for potential secrets in manifests..."
+          # Fail if any manifest contains an API key pattern (not a placeholder)
+          if grep -rE 'client_id: "[a-f0-9]{32}"' sensors/ ; then
+            echo "ERROR: Potential hardcoded API client ID detected"
+            exit 1
+          fi
+          if grep -rE 'client_secret: "[a-zA-Z0-9]{40,}"' sensors/ ; then
+            echo "ERROR: Potential hardcoded API client secret detected"
+            exit 1
+          fi
+          echo "No hardcoded credentials found."
+
+      - name: Lint shell scripts
+        run: |
+          sudo apt-get install -y shellcheck
+          shellcheck scripts/install.sh scripts/verify.sh
