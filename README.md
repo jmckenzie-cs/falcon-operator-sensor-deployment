@@ -138,8 +138,6 @@ The script will:
 
 ### Option B: Manual steps
 
-### Option B: Manual steps
-
 ### 0. Prerequisites — EKS context
 
 ```bash
