@@ -149,6 +149,8 @@ kubectl get falcondeployment -o yaml
 kubectl -n falcon-operator logs -f deploy/falcon-operator-controller-manager -c manager
 ```
 
+If the resource cannot be unstuck, a clean uninstall and reinstall usually resolves it. See [`docs/uninstall.md`](uninstall.md).
+
 ---
 
 ### Verify update check interval

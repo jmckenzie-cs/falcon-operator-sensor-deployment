@@ -109,6 +109,7 @@ Create an API client at **Support and resources > Resources and tools > API clie
 │   └── troubleshooting.md                 # Common issues and kubectl diagnostics
 ├── scripts/
 │   ├── install.sh                         # End-to-end install helper (Model 2)
+│   ├── uninstall.sh                       # Complete removal of Operator and components
 │   └── verify.sh                          # Post-install verification
 └── .github/
     └── workflows/
@@ -235,6 +236,20 @@ kubectl get falconnodesensor -A -o=jsonpath='{.items[].status.version}'
 5. Version rollbacks are handled in the Falcon console — change the policy version, and the operator picks it up on the next check cycle.
 
 See [`docs/upgrade-strategy.md`](docs/upgrade-strategy.md) for full details.
+
+## Uninstall
+
+To remove the Falcon Operator and all deployed components:
+
+```bash
+export AWS_REGION="us-east-1"
+export EKS_CLUSTER_NAME="my-cluster"
+export OPERATOR_VERSION="v1.7.0"
+
+bash scripts/uninstall.sh
+```
+
+See [`docs/uninstall.md`](docs/uninstall.md) for manual steps, GitOps considerations, and partial removal options.
 
 ## Troubleshooting
 
