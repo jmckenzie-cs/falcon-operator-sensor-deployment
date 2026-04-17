@@ -26,6 +26,51 @@ kubectl get secret falcon-secrets -n falcon-operator
 
 ## Common Issues
 
+### Operator logs show querySensorUpdatePoliciesForbidden (403)
+
+**Symptom:** Operator logs repeat an error like:
+
+```
+ERROR Reconciler error {"controller": "falconnodesensor", ..., "error": "[GET /policy/queries/sensor-update/v1][403] querySensorUpdatePoliciesForbidden ... access denied, scope not permitted"}
+```
+
+**Cause:** The API key used by the operator is missing the **Sensor Update Policies: Read** scope. Without it, the operator cannot look up the named update policy and will log this error on every reconcile cycle.
+
+**Important — scope visibility:** If the scope does not appear in the Falcon console when editing the API key, it means your Falcon role lacks permission to assign it. The scope is hidden, not absent. A full Falcon admin must either add the scope to your existing key or create a new key with it included.
+
+**What still works without this scope:** The sensor continues running normally. Only policy-driven auto-updates (`autoUpdate` and `updatePolicy`) are affected.
+
+**Resolution:**
+1. In the Falcon console, go to **Support and resources > API clients and keys**.
+2. Edit the API client used by the operator.
+3. Add **Sensor Update Policies: Read** scope.
+4. If the scope is not visible, escalate to a full Falcon admin.
+5. Update the `falcon-secrets` Kubernetes secret with the new client secret if the key was rotated, then restart the operator.
+
+---
+
+### Duplicate pods per component — one Running, one ImagePullBackOff
+
+**Symptom:** `kubectl get pods -A` shows two pods for the same component (e.g., two KAC pods, two IAR pods). One is `Running`, the other is `ImagePullBackOff`. The deployments show `1/1` available.
+
+**Cause:** This is expected Operator behavior when `cloud_region` is set to a specific region (e.g., `us-2`). The Operator first attempts to pull the sensor image from a region-scoped registry path:
+
+```
+registry.crowdstrike.com/falcon-kac/us-2/release/falcon-kac:<version>
+```
+
+That path fails. The Operator then falls back to the correct path without the region segment:
+
+```
+registry.crowdstrike.com/falcon-kac/release/falcon-kac:<version>
+```
+
+The fallback succeeds, producing the `Running` pod. The `ImagePullBackOff` pod is the inert leftover from the first attempt.
+
+**Resolution:** No action required. The `Running` pods are healthy. Kubernetes will eventually garbage-collect the failed pods. The `cloud_region` value you supplied is correct and should not be changed.
+
+---
+
 ### Sensors not deploying — ImagePullBackOff
 
 **Symptom:** DaemonSet pods stuck in `ImagePullBackOff`.

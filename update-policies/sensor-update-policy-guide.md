@@ -83,7 +83,7 @@ kubectl get falconnodesensor -A -o=jsonpath='{.items[].status.version}'
 
 ## Important Notes
 
-- The `Sensor Update Policies: Read` API scope **must** be present on the API client used by the operator. Without it, `autoUpdate` and `updatePolicy` are silently ignored and the sensor version will not change automatically.
+- The `Sensor Update Policies: Read` API scope **must** be present on the API client used by the operator. Without it, `autoUpdate` and `updatePolicy` are silently ignored and the sensor version will not change automatically. If the scope is not visible when editing the API key in the Falcon console, your Falcon role lacks permission to assign it — the scope is hidden, not absent. A full Falcon admin must add the scope or create a new key.
 - If the named policy does not exist in the Falcon console, the operator will log an error on the next reconcile cycle.
 - Policy names are **case-sensitive**.
 - For DaemonSet sensor versions **7.33 and earlier**: if the existing sensor has **Uninstall and maintenance protection** enabled on its update policy, upgrades will be blocked. Move the sensor to a policy with that setting disabled before upgrading.

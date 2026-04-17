@@ -33,6 +33,12 @@ scripts/verify.sh
 | `FALCON_UPDATE_POLICY` | `k8s-prod` | Exact name of the Falcon Sensor Update Policy |
 | `OPERATOR_VERSION` | `v1.7.0` | Falcon Operator release version to install |
 
+## Before you run
+
+**`FALCON_UPDATE_POLICY` must match the exact name of a policy that already exists in your Falcon tenant.** The default value (`k8s-prod`) is a suggested name only — it will not be created automatically. If the policy doesn't exist, the operator will log an error on every reconcile cycle.
+
+See [`update-policies/sensor-update-policy-guide.md`](../../update-policies/sensor-update-policy-guide.md) for steps to create the policy in the Falcon console before running this script.
+
 ## Usage
 
 ```bash
