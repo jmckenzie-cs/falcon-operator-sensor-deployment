@@ -34,7 +34,8 @@ The script removes everything in the correct order and waits for each step to co
 
 ## Option B: Manual steps
 
-Order matters. The Falcon Operator must be running when the FalconDeployment is deleted so it can run its finalizers and clean up child resources. Deleting the Operator first orphans the DaemonSet and component namespaces.
+> [!WARNING]
+> **Order matters.** The Falcon Operator must be running when the FalconDeployment is deleted so it can run its finalizers and clean up child resources. **Deleting the Operator first orphans the DaemonSet and component namespaces.**
 
 ### 1. Delete the FalconDeployment
 
