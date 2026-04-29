@@ -42,8 +42,10 @@ spec:
         updatePolicy: ""    # patched by each overlay
 
   falconAdmission:
+    clusterName: ""       # patched by each overlay — must be the full EKS ARN
     admissionConfig:
       admissionControlEnabled: true
 
   falconImageAnalyzer:
-    imageAnalyzerConfig: {}
+    imageAnalyzerConfig:
+      clusterName: ""       # patched by each overlay — must be the full EKS ARN
