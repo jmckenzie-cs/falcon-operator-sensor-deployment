@@ -49,11 +49,15 @@ One of:
 ### Required API Scopes
 Create an API client at **Support and resources > Resources and tools > API clients and keys** with:
 
-| Scope | Permission | Purpose |
-|---|---|---|
-| Falcon Images Download | Read | Pull sensor image from CrowdStrike registry |
-| Sensor Download | Read | Access sensor deployment packages |
-| Sensor Update Policies | Read | **Required** for `autoUpdate` + `updatePolicy` features |
+| Scope | Permission | Required by | Purpose |
+|---|---|---|---|
+| Falcon Images Download | Read | Operator | Pull sensor image from CrowdStrike registry |
+| Sensor Download | Read | Operator | Access sensor deployment packages |
+| Sensor Update Policies | Read | Operator | **Required** for `autoUpdate` + `updatePolicy` features |
+| Falcon Container Image | Read | IAR | Image Assessment at Runtime — fetch scan config and submit inventory |
+| Falcon Container Image | Write | IAR | Image Assessment at Runtime — upload image analysis results |
+
+> **Note:** If a scope is not visible when editing the API key, your Falcon role lacks permission to assign it. A full Falcon admin must add it or create a new key.
 
 ### EKS Requirements
 
@@ -141,7 +145,7 @@ export FALCON_CID="<your-cid-with-checksum>"
 # Optional overrides (defaults shown)
 export FALCON_CLOUD_REGION="autodiscover"   # or us-1, us-2, eu-1, us-gov-1
 export FALCON_UPDATE_POLICY="k8s-prod"      # exact name of your Sensor Update Policy
-export OPERATOR_VERSION="v1.7.0"            # pin to a specific operator release
+export OPERATOR_VERSION="v1.12.1"            # pin to a specific operator release
 
 # Run the installer
 bash scripts/install.sh
@@ -174,7 +178,7 @@ kubectl auth can-i '*' '*' --all-namespaces
 ### 1. Install the Falcon Operator
 
 ```bash
-OPERATOR_VERSION="v1.7.0"  # Pin to a specific release
+OPERATOR_VERSION="v1.12.1"  # Pin to a specific release
 kubectl apply -f https://github.com/crowdstrike/falcon-operator/releases/download/${OPERATOR_VERSION}/falcon-operator.yaml
 ```
 
@@ -244,7 +248,7 @@ To remove the Falcon Operator and all deployed components:
 ```bash
 export AWS_REGION="us-east-1"
 export EKS_CLUSTER_NAME="my-cluster"
-export OPERATOR_VERSION="v1.7.0"
+export OPERATOR_VERSION="v1.12.1"
 
 bash scripts/uninstall.sh
 ```

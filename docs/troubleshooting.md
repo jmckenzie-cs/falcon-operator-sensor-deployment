@@ -26,7 +26,29 @@ kubectl get secret falcon-secrets -n falcon-operator
 
 ## Common Issues
 
-### Operator logs show querySensorUpdatePoliciesForbidden (403)
+### IAR logs show 403 — api client-id missing required scopes
+
+**Symptom:** IAR pod logs repeat errors like:
+
+```
+level=ERROR msg="api client-id missing required scopes error received 403 from uri
+https://api.us-2.crowdstrike.com/image-assessment/runtime/entities/config/v1"
+```
+
+**Cause:** The API client is missing the **Falcon Container Image: Read** and/or **Falcon Container Image: Write** scopes. IAR requires both to fetch its runtime config and upload image assessment results to the Falcon cloud.
+
+**Resolution:**
+1. In the Falcon console, go to **Support and resources > API clients and keys**.
+2. Edit the API client used by the operator.
+3. Add **Falcon Container Image: Read** and **Falcon Container Image: Write** scopes.
+4. Restart the IAR pod to force a fresh token — the cached JWT will not pick up new scopes automatically:
+   ```bash
+   kubectl rollout restart deployment/falcon-image-analyzer -n falcon-iar
+   ```
+
+---
+
+
 
 **Symptom:** Operator logs repeat an error like:
 

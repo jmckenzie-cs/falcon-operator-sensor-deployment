@@ -38,6 +38,7 @@ Image Assessment at Runtime assesses container images as they run, extending sec
 
 - **Namespace:** `falcon-iar`
 - **Workload type:** Deployment
+- **Required API scopes:** `Falcon Container Image: Read` and `Falcon Container Image: Write` — IAR will log `403 access denied` errors and fail to submit image inventory without both scopes.
 
 ## EKS-Specific Network Requirements
 
