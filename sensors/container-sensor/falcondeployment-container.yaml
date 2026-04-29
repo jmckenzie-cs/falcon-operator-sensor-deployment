@@ -62,4 +62,9 @@ spec:
       admissionControlEnabled: true
 
   falconImageAnalyzer:
-    imageAnalyzerConfig: {}
+    imageAnalyzerConfig:
+      # Must match the clusterName set in falconContainerSensor above.
+      # Using the full EKS ARN prevents duplicate entries in the
+      # Falcon Kubernetes & Containers dashboard.
+      # Format: arn:aws:eks:<region>:<account-id>:cluster/<cluster-name>
+      clusterName: "CLUSTER_ARN_PLACEHOLDER"

@@ -24,13 +24,23 @@ set -euo pipefail
 : "${FALCON_CID:?FALCON_CID must be set}"
 : "${FALCON_CLOUD_REGION:=autodiscover}"
 : "${FALCON_UPDATE_POLICY:=k8s-prod}"
-: "${OPERATOR_VERSION:=v1.7.0}"
+: "${OPERATOR_VERSION:=v1.12.1}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
+# Resolve the full EKS cluster ARN. Using the ARN as the cluster identifier
+# prevents duplicate entries in the Falcon Kubernetes & Containers dashboard
+# when clusters share a short name across accounts or regions.
+EKS_CLUSTER_ARN="$(aws eks describe-cluster \
+  --region "${AWS_REGION}" \
+  --name "${EKS_CLUSTER_NAME}" \
+  --query "cluster.arn" \
+  --output text)"
+
 echo "==> Falcon Operator Installer — Amazon EKS"
 echo "    Cluster          : ${EKS_CLUSTER_NAME} (${AWS_REGION})"
+echo "    Cluster ARN      : ${EKS_CLUSTER_ARN}"
 echo "    Operator version : ${OPERATOR_VERSION}"
 echo "    Cloud region     : ${FALCON_CLOUD_REGION}"
 echo "    Update policy    : ${FALCON_UPDATE_POLICY}"
@@ -95,6 +105,7 @@ trap 'rm -f "$TMPFILE"' EXIT
 sed \
   -e "s|cloud_region: autodiscover|cloud_region: ${FALCON_CLOUD_REGION}|g" \
   -e "s|updatePolicy: \"k8s-prod\"|updatePolicy: \"${FALCON_UPDATE_POLICY}\"|g" \
+  -e "s|clusterName: \"CLUSTER_ARN_PLACEHOLDER\"|clusterName: \"${EKS_CLUSTER_ARN}\"|g" \
   "${MANIFEST}" > "${TMPFILE}"
 
 kubectl apply -f "${TMPFILE}"

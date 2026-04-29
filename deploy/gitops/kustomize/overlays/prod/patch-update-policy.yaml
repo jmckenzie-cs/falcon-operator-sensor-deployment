@@ -1,4 +1,7 @@
-# Patches updatePolicy to the prod Sensor Update Policy (Auto - N-2)
+# Patches updatePolicy and clusterName for the prod environment.
+# clusterName must be the full EKS ARN to prevent duplicate entries in the
+# Falcon Kubernetes & Containers dashboard.
+# Format: arn:aws:eks:<region>:<account-id>:cluster/<cluster-name>
 apiVersion: falcon.crowdstrike.com/v1alpha1
 kind: FalconDeployment
 metadata:
@@ -8,3 +11,8 @@ spec:
     node:
       advanced:
         updatePolicy: "k8s-prod"
+  falconAdmission:
+    clusterName: "arn:aws:eks:<region>:<account-id>:cluster/<prod-cluster-name>"
+  falconImageAnalyzer:
+    imageAnalyzerConfig:
+      clusterName: "arn:aws:eks:<region>:<account-id>:cluster/<prod-cluster-name>"

@@ -145,6 +145,14 @@ spec:
   # FalconAdmission (KAC) overrides
   # -----------------------------------------------------------------------
   falconAdmission:
+    # Set clusterName to the full EKS ARN to guarantee a unique identifier
+    # in the Falcon Kubernetes & Containers dashboard. Using only the short
+    # cluster name can cause duplicate entries when clusters share the same
+    # name across accounts or regions.
+    # Format: arn:aws:eks:<region>:<account-id>:cluster/<cluster-name>
+    # NOTE: cannot be changed after initial deployment without full redeployment.
+    clusterName: "CLUSTER_ARN_PLACEHOLDER"
+
     admissionConfig:
       # Admission control webhook is enabled by default (KAC 7.26+).
       # Set to false for visibility-only mode (no blocking).
@@ -161,9 +169,12 @@ spec:
   # -----------------------------------------------------------------------
   falconImageAnalyzer:
     imageAnalyzerConfig:
-      # EKS cluster name is resolved automatically via the AWS API.
-      # Only set explicitly if automatic discovery fails.
-      # clusterName: "my-eks-cluster"
+      # Set clusterName to the full EKS ARN to guarantee a unique identifier
+      # in the Falcon Kubernetes & Containers dashboard. Using only the short
+      # cluster name can cause duplicate entries when clusters share the same
+      # name across accounts or regions.
+      # Format: arn:aws:eks:<region>:<account-id>:cluster/<cluster-name>
+      clusterName: "CLUSTER_ARN_PLACEHOLDER"
 
       # Optional: IRSA annotation for the IAR service account if pulling
       # images from private ECR repositories.

@@ -22,7 +22,7 @@ set -euo pipefail
 
 : "${AWS_REGION:?AWS_REGION must be set}"
 : "${EKS_CLUSTER_NAME:?EKS_CLUSTER_NAME must be set}"
-: "${OPERATOR_VERSION:=v1.7.0}"
+: "${OPERATOR_VERSION:=v1.12.1}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
